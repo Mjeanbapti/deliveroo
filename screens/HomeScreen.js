@@ -6,7 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
 } from "react-native";
-import React, { useLayoutEffect } from "react";
+import React, { useLayoutEffect, useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import {
   ChevronDownIcon,
@@ -16,15 +16,37 @@ import {
 } from "react-native-heroicons/outline";
 import Categories from "../components/categories";
 import FeaturedRow from "../components/featured-row";
+import createClient from "../sanity";
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+
+  const [featuredCategories, setFeaturedCategories] = useState([]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, []);
+
+  useEffect(() => {
+    createClient
+      .fetch(
+        `
+    *[_type == "featured"] {
+        ...,
+        restaurants[]->{
+          ...,
+          dishes[]->
+          }
+        }`
+      )
+      .then((data) => {
+        setFeaturedCategories(data);
+      });
+  }, []);
+
+  console.log(featuredCategories);
 
   return (
     <SafeAreaView className="bg-white pt-5">
@@ -68,22 +90,14 @@ export default function HomeScreen() {
         {/* Categories */}
         <Categories />
         {/* Featured Rows  */}
-        <FeaturedRow
-          id="test"
-          title="Featured"
-          description="Paid placements from our partners"
-        />
-
-        <FeaturedRow
-          id="test"
-          title="Tasty Discounts"
-          description="Everyone's been enjoying these juicy discounts"
-        />
-        <FeaturedRow
-          id="test"
-          title="Offers near you"
-          description="Why not support your local restaurant tonight!"
-        />
+        {featuredCategories?.map((category) => (
+          <FeaturedRow
+            key={category._id}
+            id={category._id}
+            title={category.name}
+            description={category.short_description}
+          />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
